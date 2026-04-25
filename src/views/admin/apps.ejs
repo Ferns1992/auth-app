@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Manage Apps - Auth Gateway</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * { font-family: 'Inter', sans-serif; }
+    body { background: #0f0f1a; color: #e2e8f0; min-height: 100vh; }
+    .navbar { background: rgba(15, 15, 26, 0.95) !important; backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+    .navbar-brand { font-weight: 700; font-size: 1.3rem; }
+    .glass-card {
+      background: rgba(255, 255, 255, 0.03);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+    }
+    .btn-success {
+      background: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+      border: none; border-radius: 10px; font-weight: 600; transition: all 0.3s ease;
+    }
+    .btn-success:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(16, 185, 129, 0.4); }
+    .btn-outline-light { border-radius: 10px; font-size: 0.85rem; }
+    .btn-sm { border-radius: 8px; padding: 6px 12px; }
+    .form-control, .form-select {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #e2e8f0; border-radius: 10px;
+    }
+    .form-control:focus, .form-select:focus { background: rgba(255, 255, 255, 0.08); border-color: #6366f1; color: #e2e8f0; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
+    .form-label { color: #94a3b8; font-size: 0.85rem; font-weight: 500; }
+    .alert-danger { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; border-radius: 12px; }
+    .table { color: #e2e8f0; margin-bottom: 0; }
+    .table > thead > tr > th { border-bottom: 1px solid rgba(255, 255, 255, 0.1); color: #94a3b8; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 12px 8px; }
+    .table > tbody > tr > td { border-bottom: 1px solid rgba(255, 255, 255, 0.05); padding: 12px 8px; vertical-align: middle; }
+    .table > tbody > tr:hover { background: rgba(255, 255, 255, 0.02); }
+    .text-muted { color: #64748b !important; }
+    h3, h5 { font-weight: 600; color: #f1f5f9; }
+    small { font-size: 0.85rem; }
+    .btn-danger { border-radius: 8px; }
+    .link-cell { max-width: 300px; }
+    .link-text { 
+      display: block; 
+      overflow: hidden; 
+      text-overflow: ellipsis; 
+      white-space: nowrap; 
+      font-size: 0.8rem; 
+      color: #94a3b8;
+      cursor: pointer;
+    }
+    .link-text:hover { color: #6366f1; }
+    .secret-cell { max-width: 200px; }
+    .app-name { font-weight: 600; color: #f1f5f9; }
+    .client-id { font-size: 0.75rem; color: #64748b; }
+    .base-url-badge { font-size: 0.75rem; background: rgba(99, 102, 241, 0.2); color: #818cf8; border: 1px solid rgba(99, 102, 241, 0.3); }
+  </style>
+  <script>
+    function copyLink(appId) {
+      const linkText = document.getElementById(`link-${appId}`).title;
+      navigator.clipboard.writeText(linkText).then(() => {
+        const btn = document.getElementById(`copy-link-btn-${appId}`);
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '✓'; btn.classList.remove('btn-outline-secondary'); btn.classList.add('btn-success');
+        setTimeout(() => { btn.innerHTML = originalText; btn.classList.remove('btn-success'); btn.classList.add('btn-outline-secondary'); }, 2000);
+      });
+    }
+    function copySecret(appId) {
+      const secret = document.getElementById(`secret-${appId}`).dataset.secret;
+      navigator.clipboard.writeText(secret).then(() => {
+        const btn = document.getElementById(`copy-secret-btn-${appId}`);
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '✓';
+        setTimeout(() => { btn.innerHTML = originalText; }, 2000);
+      });
+    }
+    function toggleSecret(appId) {
+      const el = document.getElementById(`secret-${appId}`);
+      const btn = document.getElementById(`toggle-btn-${appId}`);
+      if (el.textContent === '••••••••••••••') {
+        el.textContent = el.dataset.secret; btn.textContent = 'Hide';
+      } else {
+        el.textContent = '••••••••••••••'; btn.textContent = 'Show';
+      }
+    }
+    function showFullLink(appId) {
+      const el = document.getElementById(`link-${appId}`);
+      alert(el.title);
+    }
+  </script>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+      <a class="navbar-brand" href="/admin/dashboard">🔐 Auth Gateway</a>
+      <div class="d-flex gap-2">
+        <a href="/admin/dashboard" class="btn btn-outline-light btn-sm">Dashboard</a>
+        <a href="/admin/logout" class="btn btn-outline-light btn-sm">Logout</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container mt-4">
+    <h3>📱 Manage Apps</h3>
+    <p class="text-muted mb-3">24-hour session expiry • Configure base URL for auth links below</p>
+    <% if (error) { %>
+      <div class="alert alert-danger"><%= error %></div>
+    <% } %>
+
+    <div class="row g-4">
+      <div class="col-md-4">
+        <div class="glass-card p-4">
+          <h5 class="mb-3">Register New App</h5>
+          <form method="POST" action="/admin/apps">
+            <div class="mb-3">
+              <label class="form-label">App Name</label>
+              <input type="text" name="name" class="form-control" placeholder="My App" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Redirect URI</label>
+              <input type="url" name="redirect_uri" class="form-control" placeholder="https://app.com/callback" required>
+            </div>
+            <button type="submit" class="btn btn-success w-100">Register App</button>
+          </form>
+        </div>
+
+        <div class="glass-card p-4 mt-4">
+          <h5 class="mb-3">🌐 Base URL Setting</h5>
+          <p class="text-muted small mb-3">Used for generating auth links. Leave empty for auto-detection.</p>
+          <form method="POST" action="/admin/settings/base-url">
+            <div class="mb-3">
+              <label class="form-label">Custom Domain</label>
+              <input type="url" name="base_url" class="form-control" placeholder="https://auth.yourdomain.com" value="<%= baseUrl %>">
+              <small class="text-muted">Current: <span class="base-url-badge px-2 py-1 rounded"><%= baseUrl %></span></small>
+            </div>
+            <button type="submit" class="btn btn-primary w-100">Save Base URL</button>
+          </form>
+        </div>
+      </div>
+
+      <div class="col-md-8">
+        <div class="glass-card p-0">
+          <div class="p-3 border-bottom" style="border-color:rgba(255,255,255,0.05) !important;">
+            <h5 class="mb-0">Registered Apps</h5>
+          </div>
+          <div class="table-responsive">
+            <table class="table table-hover mb-0">
+              <thead>
+                <tr>
+                  <th>App</th>
+                  <th>Client Secret</th>
+                  <th>Auth Link</th>
+                  <th style="width:80px;"></th>
+                </tr>
+              </thead>
+              <tbody>
+                <% apps.forEach(app => { %>
+                  <tr>
+                    <td>
+                      <div class="app-name"><%= app.name %></div>
+                      <div class="client-id"><%= app.client_id %></div>
+                    </td>
+                    <td class="secret-cell">
+                      <small id="secret-<%= app.id %>" data-secret="<%= app.client_secret %>" style="font-size:0.75rem;">••••••••••••••</small>
+                      <div class="mt-1">
+                        <button class="btn btn-sm btn-outline-secondary" id="toggle-btn-<%= app.id %>" onclick="toggleSecret(<%= app.id %>)">Show</button>
+                        <button class="btn btn-sm btn-outline-secondary" id="copy-secret-btn-<%= app.id %>" onclick="copySecret(<%= app.id %>)">Copy</button>
+                      </div>
+                    </td>
+                    <td class="link-cell">
+                      <small class="link-text" id="link-<%= app.id %>" title="<%= baseUrl %>/auth/authorize?client_id=<%= app.client_id %>&redirect_uri=<%= encodeURIComponent(app.redirect_uri) %>" onclick="showFullLink(<%= app.id %>)">
+                        <%= baseUrl %>/auth/authorize?client_id=<%= app.client_id %>&redirect_uri=<%= encodeURIComponent(app.redirect_uri) %>
+                      </small>
+                      <div class="mt-1">
+                        <button class="btn btn-sm btn-outline-secondary" id="copy-link-btn-<%= app.id %>" onclick="copyLink(<%= app.id %>)">Copy</button>
+                      </div>
+                    </td>
+                    <td>
+                      <form method="POST" action="/admin/apps/<%= app.id %>/delete" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this app?')">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                <% }) %>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

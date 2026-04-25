@@ -1,0 +1,17 @@
+{
+  "name": "auth-gateway",
+  "version": "1.0.0",
+  "description": "Authentication gateway app for intercepting and verifying access to other applications",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "sqlite3": "^5.1.6",
+    "bcryptjs": "^2.4.3",
+    "express-session": "^1.17.3",
+    "connect-sqlite3": "^0.9.14",
+    "ejs": "^3.1.9"
+  }
+}
