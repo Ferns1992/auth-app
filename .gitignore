@@ -4,5 +4,4 @@ data/sessions.db
 .env
 .DS_Store
 *.log
-screenshots/
 !.gitkeep
