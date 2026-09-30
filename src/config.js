@@ -23,6 +23,17 @@ function int(name, fallback) {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
+/**
+ * Express reads a string `trust proxy` as an address to match, not a hop
+ * count, so TRUST_PROXY=1 from an env file would silently never match and
+ * req.secure / req.ip would be wrong. Coerce plain integers to numbers and
+ * leave genuine values such as "loopback" or an IP alone.
+ */
+function trustProxy(value) {
+  const n = parseInt(value, 10);
+  return Number.isFinite(n) && String(n) === value.trim() ? n : value;
+}
+
 const sessionSecret = required('SESSION_SECRET');
 if (sessionSecret.length < 32) {
   throw new Error('SESSION_SECRET must be at least 32 characters long.');
@@ -49,7 +60,7 @@ module.exports = {
   RATE_LIMIT_ADMIN_MAX: int('RATE_LIMIT_ADMIN_MAX', 8),
   RATE_LIMIT_USER_MAX: int('RATE_LIMIT_USER_MAX', 10),
 
-  TRUST_PROXY: optional('TRUST_PROXY', '1'),
+  TRUST_PROXY: trustProxy(optional('TRUST_PROXY', '1')),
   LOG_LEVEL: optional('LOG_LEVEL', 'info'),
 
   newClientId: () => crypto.randomBytes(16).toString('hex'),

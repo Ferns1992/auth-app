@@ -194,6 +194,25 @@ for i in $(seq 1 14); do
 done
 check "brute force gets rate limited" "1" "$RL"
 
+# --- trust proxy: a string "1" is read by Express as an address, not a hop count ---
+TP=/tmp/tp.txt
+rm -f $TP
+curl -s -o /dev/null -c $TP -X POST -d 'username=admin&password=TestAdminPass123!' \
+  -H 'X-Forwarded-Proto: https' http://127.0.0.1:4040/admin/login
+if [ -f $TP ] && grep -q 'agw.sid' $TP; then
+  SECURE=$(grep 'agw.sid' $TP | awk -F'\t' '{print $4}')
+  if [ "$SECURE" = "TRUE" ]; then
+    printf 'PASS  %-52s %s\n' "session cookie Secure over TLS" "TRUE"
+    PASS=$((PASS + 1))
+  else
+    printf 'FAIL  %-52s got "%s" (trust proxy not honoured?)\n' "session cookie Secure over TLS" "$SECURE"
+    FAIL=$((FAIL + 1))
+  fi
+else
+  printf 'FAIL  %-52s no cookie issued\n' "session cookie Secure over TLS"
+  FAIL=$((FAIL + 1))
+fi
+
 # --- headers ---
 HDR=$(curl -sI http://127.0.0.1:4040/admin/login)
 echo "$HDR" | grep -qi 'x-frame-options: DENY' && R1=1 || R1=0
