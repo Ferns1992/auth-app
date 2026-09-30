@@ -58,6 +58,14 @@ app.use((req, res, next) => {
   next();
 });
 
+// Serve the brand icons (favicon.svg, PNG fallbacks) from /public.
+// Placed after the security headers so they inherit nosniff/CSP.
+app.use(express.static(path.join(__dirname, '..', 'public'), {
+  maxAge: '7d',
+  index: false,
+  fallthrough: true
+}));
+
 app.use((req, res, next) => {
   if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
   const origin = req.get('origin');

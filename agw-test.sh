@@ -68,6 +68,18 @@ check "GET / redirects to admin login" "http://127.0.0.1:4040/admin/login" "$(lo
 check "GET /admin/login" 200 "$(status http://127.0.0.1:4040/admin/login)"
 check "GET /nope is 404" 404 "$(status http://127.0.0.1:4040/nope)"
 
+# --- brand icons must actually be served and linked ---
+for f in favicon.svg favicon-32.png icon-192.png icon-512.png apple-touch-icon.png; do
+  check "GET /$f" 200 "$(status http://127.0.0.1:4040/$f)"
+done
+CT=$(curl -sI http://127.0.0.1:4040/favicon.svg | grep -i '^content-type' | tr -d '\r')
+echo "$CT" | grep -qi 'image/svg+xml' && CT_OK=1 || CT_OK=0
+check "favicon.svg served as image/svg+xml" "1" "$CT_OK"
+curl -s http://127.0.0.1:4040/admin/login | grep -q 'rel="icon"' && LI=1 || LI=0
+check "admin login links the favicon" "1" "$LI"
+curl -s http://127.0.0.1:4040/admin/login | grep -q 'apple-touch-icon' && LI2=1 || LI2=0
+check "admin login links apple-touch-icon" "1" "$LI2"
+
 # --- admin auth ---
 check "POST /admin/login bad password" 401 "$(status -X POST -d 'username=admin&password=wrong' http://127.0.0.1:4040/admin/login)"
 check "GET /admin/dashboard when logged out" "http://127.0.0.1:4040/admin/login" "$(location -c $J http://127.0.0.1:4040/admin/dashboard)"

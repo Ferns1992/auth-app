@@ -30,6 +30,7 @@ COPY --from=build /usr/src/app/node_modules ./node_modules
 COPY --chown=node:node package.json ./
 COPY --chown=node:node src ./src
 COPY --chown=node:node scripts ./scripts
+COPY --chown=node:node public ./public
 
 RUN mkdir -p /usr/src/app/data && chown -R node:node /usr/src/app/data
 
