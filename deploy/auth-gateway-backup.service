@@ -1,0 +1,8 @@
+[Unit]
+Description=Auth Gateway database snapshot
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/auth-gateway-backup.sh
