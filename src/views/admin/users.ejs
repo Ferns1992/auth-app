@@ -1,154 +1,124 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Manage Users - Auth Gateway</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    * { font-family: 'Inter', sans-serif; }
-    body { background: #0f0f1a; color: #e2e8f0; min-height: 100vh; }
-    .navbar { background: rgba(15, 15, 26, 0.95) !important; backdrop-filter: blur(20px); border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
-    .navbar-brand { font-weight: 700; font-size: 1.3rem; }
-    .glass-card {
-      background: rgba(255, 255, 255, 0.03);
-      backdrop-filter: blur(20px);
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      border-radius: 16px;
-      transition: all 0.3s ease;
-    }
-    .glass-card:hover { border-color: rgba(99, 102, 241, 0.3); }
-    .btn-primary {
-      background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
-      border: none; border-radius: 10px; font-weight: 600; transition: all 0.3s ease;
-    }
-    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4); }
-    .btn-outline-light { border-radius: 10px; font-size: 0.85rem; }
-    .btn-sm { border-radius: 8px; }
-    .form-control {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      color: #e2e8f0; border-radius: 10px;
-    }
-    .form-control:focus { background: rgba(255, 255, 255, 0.08); border-color: #6366f1; color: #e2e8f0; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
-    .form-label { color: #94a3b8; font-size: 0.85rem; font-weight: 500; }
-    .alert-danger { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #fca5a5; border-radius: 12px; }
-    .table { color: #e2e8f0; }
-    .table-striped > tbody > tr:nth-of-type(odd) > * { background: rgba(255, 255, 255, 0.02); color: #e2e8f0; }
-    .table td, .table th { border-color: rgba(255, 255, 255, 0.05); }
-    .badge { border-radius: 8px; padding: 6px 12px; font-weight: 500; cursor: pointer; }
-    .badge.bg-success { background: rgba(16, 185, 129, 0.2) !important; color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); }
-    .form-select { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); color: #e2e8f0; border-radius: 10px; }
-    .form-select:focus { border-color: #6366f1; box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15); }
-    h3, h5 { font-weight: 600; color: #f1f5f9; }
-    .text-muted { color: #64748b !important; }
-    .btn-danger { border-radius: 8px; }
-  </style>
-  <script>
-    function assignApp(userId, selectElem) {
-      const appId = selectElem.value;
-      if (appId) {
-        const form = document.createElement('form');
-        form.method = 'POST'; form.action = '/admin/assign-app';
-        ['user_id', 'app_id'].forEach(name => {
-          const input = document.createElement('input');
-          input.type = 'hidden'; input.name = name;
-          input.value = name === 'user_id' ? userId : appId;
-          form.appendChild(input);
-        });
-        document.body.appendChild(form); form.submit();
-      }
-    }
-  </script>
-</head>
-<body>
-  <nav class="navbar navbar-expand-lg navbar-dark">
-    <div class="container">
-      <a class="navbar-brand" href="/admin/dashboard">🔐 Auth Gateway</a>
-      <div class="d-flex gap-2">
-        <a href="/admin/dashboard" class="btn btn-outline-light btn-sm">Dashboard</a>
-        <a href="/admin/logout" class="btn btn-outline-light btn-sm">Logout</a>
-      </div>
-    </div>
-  </nav>
+<%- include('../partials/head', { title: 'Manage Users', active: 'users' }) %>
 
-  <div class="container mt-4">
-    <h3>👥 Manage End Users</h3>
-    <% if (error) { %>
-      <div class="alert alert-danger"><%= error %></div>
-    <% } %>
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-2 mb-4">
+  <div>
+    <h3 class="mb-1">End Users</h3>
+    <p class="text-dim mb-0">Accounts that can sign in to your apps, and which apps each one may reach.</p>
+  </div>
+  <span class="badge badge-neutral"><%= users.length %> user<%= users.length === 1 ? '' : 's' %> · <%= apps.length %> app<%= apps.length === 1 ? '' : 's' %></span>
+</div>
 
-    <div class="row g-4">
-      <div class="col-md-4">
-        <div class="glass-card p-4">
-          <h5>Add New User</h5>
-          <form method="POST" action="/admin/users">
-            <div class="mb-3">
-              <label class="form-label">Username</label>
-              <input type="text" name="username" class="form-control" required>
-            </div>
-            <div class="mb-3">
-              <label class="form-label">Password</label>
-              <input type="password" name="password" class="form-control" required>
-            </div>
-            <button type="submit" class="btn btn-primary w-100">Create User</button>
-          </form>
+<div class="row g-3">
+  <div class="col-lg-4">
+    <div class="glass-card p-4">
+      <h5 class="mb-3"><i class="bi bi-person-plus"></i> Add New User</h5>
+      <form method="POST" action="/admin/users" autocomplete="off">
+        <div class="mb-3">
+          <label class="form-label">Username</label>
+          <input type="text" name="username" class="form-control" required
+                 pattern="[A-Za-z0-9._\-]+" maxlength="64" placeholder="jsmith">
+          <div class="form-hint mt-1">Letters, numbers, dot, underscore, hyphen.</div>
         </div>
-      </div>
-      <div class="col-md-8">
-        <div class="glass-card p-4">
-          <h5>Existing Users</h5>
-          <div class="table-responsive">
-            <table class="table">
-              <thead>
-                <tr><th>Username</th><th>Assigned Apps</th><th>Actions</th></tr>
-              </thead>
-              <tbody>
-                <% if (users.length === 0) { %>
-                  <tr><td colspan="3" class="text-muted">No users yet. Create one above.</td></tr>
-                <% } %>
-                <% users.forEach(user => { %>
-                  <% const userAppIds = userApps.filter(ua => ua.user_id === user.id).map(ua => ua.app_id); %>
-                  <tr>
-                    <td style="vertical-align:middle;"><%= user.username %></td>
-                    <td>
-                      <% apps.forEach(app => { %>
-                        <% if (userAppIds.includes(app.id)) { %>
-                          <form method="POST" action="/admin/revoke-app" class="d-inline">
-                            <input type="hidden" name="user_id" value="<%= user.id %>">
-                            <input type="hidden" name="app_id" value="<%= app.id %>">
-                            <button type="submit" class="badge bg-success border-0 me-1 mb-1" title="Click to revoke">
-                              <%= app.name %> ✕
-                            </button>
-                          </form>
-                        <% } %>
-                      <% }) %>
-                      <select class="form-select form-select-sm d-inline-block mb-1" style="width:auto;" onchange="assignApp(<%= user.id %>, this)">
-                        <option value="">+ Assign App</option>
-                        <% apps.forEach(app => { %>
-                          <% if (!userAppIds.includes(app.id)) { %>
-                            <option value="<%= app.id %>"><%= app.name %></option>
-                          <% } %>
-                        <% }) %>
-                      </select>
-                    </td>
-                    <td style="vertical-align:middle;">
-                      <form method="POST" action="/admin/users/<%= user.id %>/delete" class="d-inline">
-                        <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Delete this user?')">
-                          <i class="bi bi-trash"></i> Delete
+        <div class="mb-3">
+          <label class="form-label">Password</label>
+          <input type="password" name="password" class="form-control" required
+                 minlength="<%= minPasswordLength %>" autocomplete="new-password">
+          <div class="form-hint mt-1">At least <%= minPasswordLength %> characters.</div>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Create User</button>
+      </form>
+    </div>
+  </div>
+
+  <div class="col-lg-8">
+    <div class="glass-card p-4">
+      <h5 class="mb-3"><i class="bi bi-people"></i> Existing Users</h5>
+      <div class="table-responsive">
+        <table class="table align-middle">
+          <thead>
+            <tr>
+              <th>Username</th>
+              <th>App Access</th>
+              <th class="text-end">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            <% if (users.length === 0) { %>
+              <tr>
+                <td colspan="3">
+                  <div class="empty-state">
+                    <div class="icon">👥</div>
+                    <div>No end users yet. Create one to get started.</div>
+                  </div>
+                </td>
+              </tr>
+            <% } %>
+            <% users.forEach(function (user) { %>
+              <% var userAppIds = userApps.filter(function (ua) { return ua.user_id === user.id; }).map(function (ua) { return ua.app_id; }); %>
+              <tr>
+                <td>
+                  <div class="fw-semibold"><%= user.username %></div>
+                  <div class="small text-dim">created <span class="relative-time" data-time="<%= user.created_at %>"></span></div>
+                </td>
+                <td>
+                  <% if (apps.length === 0) { %>
+                    <span class="text-dim small">No apps registered yet</span>
+                  <% } %>
+                  <% apps.forEach(function (app) { %>
+                    <% if (userAppIds.indexOf(app.id) !== -1) { %>
+                      <form method="POST" action="/admin/revoke-app" class="d-inline" onsubmit="return confirm('Revoke <%= app.name %> access for <%= user.username %>?')">
+                        <input type="hidden" name="user_id" value="<%= user.id %>">
+                        <input type="hidden" name="app_id" value="<%= app.id %>">
+                        <button type="submit" class="badge grant-pill border-0 me-1 mb-1" title="Click to revoke access">
+                          <%= app.name %> ✕
                         </button>
                       </form>
-                    </td>
-                  </tr>
-                <% }) %>
-              </tbody>
-            </table>
-          </div>
-        </div>
+                    <% } %>
+                  <% }) %>
+                  <% if (apps.length > 0) { %>
+                    <select class="form-select form-select-sm d-inline-block mb-1" style="width:auto;"
+                            onchange="assignApp(<%= user.id %>, this)">
+                      <option value="">+ Assign app</option>
+                      <% apps.forEach(function (app) { %>
+                        <% if (userAppIds.indexOf(app.id) === -1) { %>
+                          <option value="<%= app.id %>"><%= app.name %></option>
+                        <% } %>
+                      <% }) %>
+                    </select>
+                  <% } %>
+                </td>
+                <td class="text-end">
+                  <form method="POST" action="/admin/users/<%= user.id %>/delete" class="d-inline"
+                        onsubmit="return confirm('Delete <%= user.username %>? Their app access is removed too.')">
+                    <button type="submit" class="btn btn-sm btn-danger"><i class="bi bi-trash"></i></button>
+                  </form>
+                </td>
+              </tr>
+            <% }) %>
+          </tbody>
+        </table>
       </div>
     </div>
   </div>
-</body>
-</html>
+</div>
+
+<script>
+  function assignApp(userId, selectElem) {
+    var appId = selectElem.value;
+    if (!appId) return;
+    var form = document.createElement('form');
+    form.method = 'POST';
+    form.action = '/admin/assign-app';
+    [['user_id', userId], ['app_id', appId]].forEach(function (pair) {
+      var input = document.createElement('input');
+      input.type = 'hidden';
+      input.name = pair[0];
+      input.value = pair[1];
+      form.appendChild(input);
+    });
+    document.body.appendChild(form);
+    form.submit();
+  }
+</script>
+
+<%- include('../partials/foot') %>

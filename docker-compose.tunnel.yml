@@ -1,0 +1,12 @@
+# Overlay applied with: docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d
+# Drops the loopback publish entirely and joins the cloudflared network so the
+# tunnel can reach the container by name. No host port is exposed.
+services:
+  auth-gateway:
+    ports: !reset []
+    networks:
+      - cloudflared_default
+
+networks:
+  cloudflared_default:
+    external: true

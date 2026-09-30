@@ -1,0 +1,68 @@
+  </main>
+
+  <div class="toast-stack" id="toastStack"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    function showToast(message, kind) {
+      var stack = document.getElementById('toastStack');
+      if (!stack) return;
+      var el = document.createElement('div');
+      el.className = 'toast-item';
+      if (kind === 'bad') el.style.borderLeftColor = '#ef4444';
+      if (kind === 'warn') el.style.borderLeftColor = '#f59e0b';
+      el.textContent = message;
+      stack.appendChild(el);
+      setTimeout(function () {
+        el.style.opacity = '0';
+        el.style.transition = 'opacity 0.3s ease';
+        setTimeout(function () { el.remove(); }, 300);
+      }, 2200);
+    }
+
+    function copyText(text, label) {
+      var done = function () { showToast((label || 'Value') + ' copied to clipboard', 'ok'); };
+      var fail = function () { showToast('Copy failed, select the text manually', 'bad'); };
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(done, fail);
+      } else {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        try { document.execCommand('copy'); done(); } catch (e) { fail(); }
+        ta.remove();
+      }
+    }
+
+    function copyFromEl(id, label) {
+      var el = document.getElementById(id);
+      if (el) copyText(el.dataset.value || el.textContent, label);
+    }
+
+    function relativeTime(el) {
+      var raw = el.getAttribute('data-time');
+      if (!raw) return;
+      var then = new Date(raw.replace(' ', 'T') + (raw.indexOf('Z') === -1 ? 'Z' : ''));
+      if (isNaN(then.getTime())) return;
+      var diff = Math.round((Date.now() - then.getTime()) / 1000);
+      var text;
+      if (diff < 60) text = diff + 's ago';
+      else if (diff < 3600) text = Math.floor(diff / 60) + 'm ago';
+      else if (diff < 86400) text = Math.floor(diff / 3600) + 'h ago';
+      else text = Math.floor(diff / 86400) + 'd ago';
+      el.textContent = text;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      var times = document.querySelectorAll('.relative-time');
+      for (var i = 0; i < times.length; i++) relativeTime(times[i]);
+      setInterval(function () {
+        for (var j = 0; j < times.length; j++) relativeTime(times[j]);
+      }, 30000);
+    });
+  </script>
+</body>
+</html>

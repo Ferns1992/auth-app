@@ -1,12 +1,27 @@
-version: '3.8'
-
 services:
   auth-gateway:
     build: .
-    ports:
-      - "4040:4040"
-    volumes:
-      - ./data:/usr/src/app/data
-    environment:
-      - PORT=4040
+    image: auth-gateway:latest
+    container_name: auth-gateway
     restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      PORT: "4040"
+      DATA_DIR: /usr/src/app/data
+    # Loopback only. The published copy of this file is for local diagnostics;
+    # docker-compose.tunnel.yml removes it so nothing is reachable directly.
+    ports:
+      - "127.0.0.1:4040:4040"
+    volumes:
+      - auth-gateway-data:/usr/src/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:4040/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  auth-gateway-data:
