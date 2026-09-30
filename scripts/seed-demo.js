@@ -3,7 +3,13 @@
  * Seeds demo users, apps, access grants and auth log history.
  *
  * Safe to run repeatedly: every insert is guarded by an existence check, so a
- * second run will not duplicate rows or touch the admin account.
+ * second run will not duplicate rows or touch the admin account. Existing demo
+ * apps also have their redirect_uri re-synced to the values below, so upgrading
+ * from an earlier seed corrects the callbacks in place.
+ *
+ * Demo callbacks deliberately use the reserved ".invalid" TLD (RFC 2606), which
+ * can never resolve. Real subdomains must never be registered as demo clients:
+ * the demo password is public, so a real callback would be an auth bypass.
  *
  *   node scripts/seed-demo.js
  *
@@ -27,11 +33,11 @@ const DEMO_USERS = [
 ];
 
 const DEMO_APPS = [
-  { name: 'Driver Ledger PH', redirect_uri: 'https://driverledger.sysitadmin.com/auth/callback' },
-  { name: 'Nexus Dashboard', redirect_uri: 'https://nexus.sysitadmin.com/oauth/callback' },
-  { name: 'Modern ERP', redirect_uri: 'https://erp.sysitadmin.com/sso/return' },
-  { name: 'DocChat', redirect_uri: 'https://dococr.sysitadmin.com/auth/callback' },
-  { name: 'YT Poster', redirect_uri: 'https://ytposter.sysitadmin.com/oauth2/redirect' }
+  { name: 'Driver Ledger PH', redirect_uri: 'https://driver-ledger.example.invalid/auth/callback' },
+  { name: 'Nexus Dashboard', redirect_uri: 'https://nexus-dashboard.example.invalid/oauth/callback' },
+  { name: 'Modern ERP', redirect_uri: 'https://modern-erp.example.invalid/sso/return' },
+  { name: 'DocChat', redirect_uri: 'https://docchat.example.invalid/auth/callback' },
+  { name: 'YT Poster', redirect_uri: 'https://yt-poster.example.invalid/oauth2/redirect' }
 ];
 
 const EVENTS_SUCCESS = ['login', 'authorize'];
@@ -53,6 +59,15 @@ function isoOffset(hoursAgo) {
 }
 
 async function main() {
+  // Safety net: demo callbacks must stay on the reserved .invalid TLD. The demo
+  // password is public, so a real callback host would be an authentication bypass.
+  for (const demo of DEMO_APPS) {
+    const host = new URL(demo.redirect_uri).hostname;
+    if (!host.endsWith('.invalid')) {
+      throw new Error(`refusing to seed "${demo.name}": callback host "${host}" is not a reserved .invalid domain`);
+    }
+  }
+
   await initDb();
 
   const hashed = bcrypt.hashSync(DEMO_PASSWORD, config.BCRYPT_ROUNDS);
@@ -76,7 +91,7 @@ async function main() {
   const appIds = {};
 
   for (const demo of DEMO_APPS) {
-    let row = await get(`SELECT id FROM apps WHERE name = ?`, [demo.name]);
+    let row = await get(`SELECT id, redirect_uri FROM apps WHERE name = ?`, [demo.name]);
     if (!row) {
       const res = await run(
         `INSERT INTO apps (name, client_id, client_secret, redirect_uri) VALUES (?, ?, ?, ?)`,
@@ -86,7 +101,12 @@ async function main() {
       console.log(`created app   ${demo.name}`);
     } else {
       appIds[demo.name] = row.id;
-      console.log(`exists  app   ${demo.name}`);
+      if (row.redirect_uri !== demo.redirect_uri) {
+        await run(`UPDATE apps SET redirect_uri = ? WHERE id = ?`, [demo.redirect_uri, row.id]);
+        console.log(`updated app   ${demo.name} redirect_uri -> ${demo.redirect_uri}`);
+      } else {
+        console.log(`exists  app   ${demo.name}`);
+      }
     }
   }
 
