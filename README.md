@@ -1,356 +1,242 @@
 # 🔐 Auth Gateway
 
-> **The Ultimate Authentication Gateway** - A modern, secure middleware that intercepts and controls access to your applications with style ✨
+A small authentication gateway that sits in front of your applications. You
+register an app, create users, grant access per user-per-app, and hand out an
+authorize URL. The gateway authenticates the user and redirects them back to
+the app's registered callback with `auth=success` or `auth=failed`.
 
-![Auth Gateway](https://img.shields.io/badge/Auth%20Gateway-Secure%20Access-blue?style=for-the-badge&logo=shield)
-![Node.js](https://img.shields.io/badge/Node.js-18+-green?style=for-the-badge&logo=nodedotjs)
+![Auth Gateway](https://img.shields.io/badge/Auth%20Gateway-Access%20Control-blue?style=for-the-badge&logo=shield)
+![Node.js](https://img.shields.io/badge/Node.js-22-green?style=for-the-badge&logo=nodedotjs)
 ![Docker](https://img.shields.io/badge/Docker-Ready-blue?style=for-the-badge&logo=docker)
-![Portainer](https://img.shields.io/badge/Portainer-Ready-13bee7?style=for-the-badge&logo=portainer)
 ![SQLite](https://img.shields.io/badge/Database-SQLite-lightblue?style=for-the-badge&logo=sqlite)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
 ---
 
-## ✨ Features
+## 🔒 Security
 
-| Feature | Description |
-|---------|-------------|
-| 🔑 **Admin Management** | Secure admin panel with default credentials (`admin`/`admin`) |
-| 👥 **Multi-User Support** | Create and manage unlimited end-users for application access |
-| 📱 **App Registration** | Register unlimited third-party applications to protect |
-| 🔗 **Access Control** | Assign specific users to specific applications with one click |
-| 📋 **Auth Logging** | Track ALL authentication attempts with IP, timestamp, and status |
-| 🌐 **Custom Domain** | Configure custom base URL for auth links (perfect for production) |
-| 🐳 **Dockerized** | One-command deployment with Docker Compose on port 4040 |
-| 🎨 **Modern UI** | Dark glassmorphism theme with smooth animations |
-| 🔒 **24h Sessions** | End-user sessions automatically expire after 24 hours |
-| 📋 **One-Click Copy** | Copy auth links and secrets instantly from the admin panel |
-| 🔐 **bcrypt Security** | All passwords hashed with bcrypt for maximum security |
+This project was hardened after an initial public release, and the hardening is
+covered by the smoke tests so it cannot silently regress. Highlights:
+
+| Area | What it does |
+|------|--------------|
+| **Admin bootstrap** | No default `admin`/`admin`. The admin is created on first boot from `ADMIN_PASSWORD`, or a strong one-time password is generated and printed to the container log. The server refuses to start on the known public `SESSION_SECRET`. |
+| **Session secret** | `SESSION_SECRET` is required and must be ≥ 32 characters. |
+| **Open redirect** | Callback `redirect_uri` must exactly match a registered URI. Protocol-relative (`//evil.tld`) and look-alike values are rejected. Existing query strings on a registered callback are preserved. |
+| **Proxy awareness** | `TRUST_PROXY` is coerced to a number, so the session cookie gets `Secure` over TLS and the auth log records the real client IP instead of the proxy. |
+| **Sessions** | `httpOnly`, `sameSite=lax`, `Secure` over TLS, rolling 24h expiry, SQLite-backed store. |
+| **Rate limiting** | Per-IP failed sign-in limits for both the admin and end-user forms. |
+| **CSRF / headers** | Same-origin check on state-changing requests, plus CSP, `X-Frame-Options: DENY`, `nosniff`, and `Referrer-Policy`. |
+| **Secrets** | Client secrets are stored per app, can be revealed/copied/rotated from the UI, and passwords are bcrypt-hashed. |
+| **Integrity** | Every backup is verified by opening the copied file and comparing row counts — never by trusting the source. |
 
 ---
 
 ## 📸 Screenshots
 
-> 📝 **Note**: Add your own screenshots to the `screenshots/` folder and update the paths below
+| Admin login | Dashboard |
+|---|---|
+| ![Admin login](screenshots/admin-login.png) | ![Dashboard](screenshots/dashboard.png) |
 
-### 🔑 Admin Login
-![Admin Login](screenshots/admin-login.png)
-> *Modern dark-themed login with glassmorphism effects*
+| Users | Apps |
+|---|---|
+| ![Users](screenshots/users.png) | ![Apps](screenshots/apps.png) |
 
-### 📊 Admin Dashboard
-![Dashboard](screenshots/dashboard.png)
-> *Clean overview of users, apps, and recent auth attempts*
-
-### 👥 User Management
-![Users](screenshots/users.png)
-> *Create users and assign them to apps with one click*
-
-### 📱 App Management
-![Apps](screenshots/apps.png)
-> *Register apps, view client secrets, and copy auth links instantly*
-
-### 📋 Authentication Logs
-![Logs](screenshots/logs.png)
-> *Track every auth attempt with full details*
-
-### 🔐 End-User Login
-![User Login](screenshots/user-login.png)
-> *Minimalist login page for end-users accessing protected apps*
+| Logs | End-user login |
+|---|---|
+| ![Logs](screenshots/logs.png) | ![User login](screenshots/user-login.png) |
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Quick Start (Docker)
 
-### Option 1: 🐳 Deploy with Docker (Recommended)
-
-1. **Clone the repository:**
+1. **Configure:**
    ```bash
-   git clone https://github.com/YOUR_USERNAME/auth-app.git
+   git clone https://github.com/Ferns1992/auth-app.git
    cd auth-app
+   cp .env.example .env
+   # Generate a session secret and paste it into .env:
+   node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+   # Optionally set ADMIN_PASSWORD; leave it blank to have one generated and
+   # printed in the container log on first boot.
    ```
 
-2. **Start with Docker Compose:**
+2. **Run:**
    ```bash
-   docker-compose up -d
+   docker compose up -d --build
    ```
 
-3. **Access the admin panel:**
-   ```
-   http://localhost:4040/admin/login
-   ```
-   Default login: `admin` / `admin`
+3. **Open** the admin panel at `http://localhost:4040/admin/login` and sign in
+   with the admin credentials you configured.
 
-4. **⚠️ IMPORTANT: Change the default admin password immediately!**
-
----
-
-### Option 2: 🔧 Manual Deployment
-
-1. **Clone and install:**
-   ```bash
-   git clone https://github.com/YOUR_USERNAME/auth-app.git
-   cd auth-app
-   npm install
-   ```
-
-2. **Start the server:**
-   ```bash
-   npm start
-   ```
-
-3. **Access at:**
-   ```
-   http://localhost:4040
-   ```
-
----
-
-## 🐳 Docker Deployment Guide
-
-### Basic Docker Run
-```bash
-docker build -t auth-gateway .
-docker run -d -p 4040:4040 -v $(pwd)/data:/usr/src/app/data --name auth-gateway auth-gateway
-```
-
-### Using Docker Compose (Recommended)
-```bash
-docker-compose up -d
-```
-
-**Docker Compose file included:**
-```yaml
-version: '3.8'
-
-services:
-  auth-gateway:
-    build: .
-    ports:
-      - "4040:4040"
-    volumes:
-      - ./data:/usr/src/app/data
-    environment:
-      - PORT=4040
-    restart: unless-stopped
-```
-
----
-
-## 🚀 Portainer Deployment Guide
-
-### Step 1: Access Portainer
-Open your Portainer instance at `http://your-server:9000`
-
-### Step 2: Create New Stack
-1. Go to **Stacks** → **Add Stack**
-2. Name it: `auth-gateway`
-3. Select **Web Editor** or **Upload**
-
-### Step 3: Paste This Stack Configuration
-```yaml
-version: '3.8'
-
-services:
-  auth-gateway:
-    image: node:alpine
-    container_name: auth-gateway
-    working_dir: /usr/src/app
-    volumes:
-      - /your/host/path/auth-app:/usr/src/app
-    ports:
-      - "4040:4040"
-    command: sh -c "npm install && node src/server.js"
-    restart: unless-stopped
-    environment:
-      - NODE_ENV=production
-      - PORT=4040
-```
-
-**OR use the included Dockerfile:**
-```yaml
-version: '3.8'
-
-services:
-  auth-gateway:
-    build:
-      context: https://github.com/YOUR_USERNAME/auth-app.git
-    ports:
-      - "4040:4040"
-    volumes:
-      - auth_data:/usr/src/app/data
-    restart: unless-stopped
-    environment:
-      - PORT=4040
-
-volumes:
-  auth_data:
-```
-
-### Step 4: Deploy
-Click **Deploy the Stack** 🎉
-
-### Step 5: Access Your App
-```
-http://your-server-ip:4040/admin/login
-```
-
----
-
-## 🛠️ Usage Guide
-
-### 1️⃣ Admin Setup
-- Login with default credentials (`admin`/`admin`)
-- **IMMEDIATELY** change the default password via the dashboard
-- Configure your custom domain in **Manage Apps** → **Base URL Setting**
-
-### 2️⃣ Register Protected Apps
-1. Go to **Manage Apps** → **Register New App**
-2. Enter:
-   - **App Name**: Your application's name
-   - **Redirect URI**: Where to redirect after auth (e.g., `https://yourapp.com/callback`)
-3. Click **Register App**
-4. **Copy the auto-generated Auth Link** - this is what you'll use in your app!
-
-### 3️⃣ Create End Users
-1. Go to **Manage Users** → **Add New User**
-2. Create usernames/passwords for users who need app access
-
-### 4️⃣ Assign Users to Apps
-- In the **Manage Users** page, use the dropdown to assign users to specific apps
-- Only assigned users can access the protected apps
-- Click the ✕ badge to revoke access
-
-### 5️⃣ Configure Custom Domain (Production)
-1. Go to **Manage Apps** → **Base URL Setting**
-2. Enter your custom domain: `https://auth.yourdomain.com`
-3. Click **Save Base URL**
-4. All auth links will now use your custom domain!
-
-### 6️⃣ Integrate with Third-Party Apps
-In your protected applications, redirect users to the Auth Gateway:
-
-```javascript
-// Example: Redirect to Auth Gateway for login
-const authUrl = `https://auth.yourdomain.com/auth/authorize?client_id=YOUR_CLIENT_ID&redirect_uri=YOUR_REDIRECT_URI`;
-window.location.href = authUrl;
-```
-
-**After successful authentication, users are redirected back to:**
-```
-YOUR_REDIRECT_URI?auth=success&user=username
-```
-
-**On failure:**
-```
-YOUR_REDIRECT_URI?auth=failed&reason=no_access
-```
-
----
-
-## 📊 Database Schema
-
-The app uses SQLite with the following tables:
-
-| Table | Description |
-|-------|-------------|
-| 👤 `users` | Stores admin and end-user credentials |
-| 📱 `apps` | Registered third-party applications |
-| 🔗 `user_apps` | Links users to apps they can access |
-| 📋 `auth_logs` | Tracks ALL authentication attempts |
-| ⚙️ `settings` | Stores configuration (base URL, etc.) |
-
-Database file is stored in `/data/auth-gateway.db` and persists via Docker volume.
-
----
-
-## 🔐 Security Features
-
-- ✅ **Password Hashing**: All passwords hashed with bcrypt (salt rounds: 10)
-- ✅ **Session Management**: Secure sessions with SQLite session store
-- ✅ **24-Hour Expiry**: End-user sessions expire after 24 hours
-- ✅ **Access Control**: Users can ONLY access apps they're assigned to
-- ✅ **Auth Logging**: Every attempt is logged (success/failure, IP, user-agent)
-- ✅ **No Public Registration**: Only admin can create users - no public signup
+> The admin account is created only on first boot. If you did not set
+> `ADMIN_PASSWORD`, grab the generated one from `docker compose logs auth-gateway`.
 
 ---
 
 ## ⚙️ Configuration
 
-| Environment Variable | Default | Description |
-|---------------------|---------|-------------|
-| `PORT` | 4040 | Port the app runs on |
+All settings are environment variables (see `.env.example`).
 
-**Base URL Configuration:**
-Set via admin panel in **Manage Apps** → **Base URL Setting**
-- Leave empty for auto-detection (development)
-- Set to custom domain for production (e.g., `https://auth.yourdomain.com`)
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SESSION_SECRET` | *(required)* | ≥ 32 chars. Signs session cookies. Must not be the public placeholder. |
+| `ADMIN_USERNAME` | `admin` | Admin username, created on first boot only. |
+| `ADMIN_PASSWORD` | *(generated)* | Admin password. Blank ⇒ a strong one-time password is generated and logged. |
+| `PORT` | `4040` | HTTP port. |
+| `DATA_DIR` | `./data` | Where `auth-gateway.db` and `sessions.db` live. |
+| `SESSION_TTL_HOURS` | `24` | End-user session lifetime. |
+| `SECURE_COOKIES` | `auto` | `auto` sets the `Secure` cookie attribute whenever the request arrived over TLS. |
+| `TRUST_PROXY` | `1` | Reverse-proxy hops to trust for client IP / protocol detection. |
+| `MIN_PASSWORD_LENGTH` | `8` | Enforced for admin-created users. |
+| `BCRYPT_ROUNDS` | `10` | Password hashing cost. |
+| `RATE_LIMIT_WINDOW_MINUTES` | `15` | Sliding window for failed sign-in limits. |
+| `RATE_LIMIT_ADMIN_MAX` | `8` | Max failed admin sign-ins per IP per window. |
+| `RATE_LIMIT_USER_MAX` | `10` | Max failed end-user sign-ins per IP per window. |
 
----
-
-## 📈 Auth Logs
-
-All authentication attempts are logged including:
-- ✅ Successful logins (with username and app name)
-- ❌ Failed attempts (with reason)
-- 🔗 Links (redirect URIs) used for authentication
-- 🌐 IP addresses
-- 🖥️ User agents
-- 🕒 Timestamps
-
-View logs in the admin panel under **Auth Logs**.
+The public base URL used in generated authorize links is set in the admin panel
+(**Apps → Base URL**). Leave it blank to auto-detect from the request.
 
 ---
 
-## 🤝 Contributing
+## ☁️ Deploying behind a Cloudflare Tunnel (no public port)
 
-1. Fork the repository 🍴
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request 🎉
+`docker-compose.tunnel.yml` is an overlay that removes the loopback port
+publish and joins the `cloudflared_default` Docker network, so the app is
+reachable **only** through the tunnel and never directly from the internet:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.tunnel.yml up -d
+```
+
+Point a cloudflared ingress rule at the container by name:
+
+```
+authgateway.example.com -> http://auth-gateway:4040
+```
+
+Then proxy the hostname in Cloudflare as usual.
+
+---
+
+## 💾 Backups
+
+`deploy/auth-gateway-backup.sh` snapshots the database off the running
+container, verifies the copy, compacts it, keeps the newest 14 locally, mirrors
+to Cloudflare R2, and reads the newest object back to confirm the round trip.
+It runs on the host so the R2 credentials are never reachable from the web app.
+
+```bash
+# Install
+sudo install -m 750 deploy/auth-gateway-backup.sh /usr/local/bin/auth-gateway-backup.sh
+sudo install -m 644 deploy/auth-gateway-backup.{service,timer} /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now auth-gateway-backup.timer
+
+# Run once, now
+sudo systemctl start auth-gateway-backup.service
+journalctl -u auth-gateway-backup.service
+```
+
+Requires `sqlite3`, `rclone` (with an `R2:` remote), and `docker` on the host.
+Verify a restore by reading an object back and opening it:
+
+```bash
+rclone cat R2:auth-gateway-backups/<snapshot>.db > /tmp/restore.db
+sqlite3 /tmp/restore.db "PRAGMA integrity_check; SELECT COUNT(*) FROM users;"
+```
+
+---
+
+## 🧪 Demo data (development only)
+
+```bash
+node scripts/seed-demo.js
+```
+
+Creates sample users, apps, grants, and a week of auth logs. The demo callbacks
+use the reserved `.invalid` TLD (RFC 2606) so they can never resolve — the demo
+password is public, so registering a real subdomain as a demo client would be an
+authentication bypass. Delete the demo accounts before using this for anything
+real.
+
+---
+
+## 🔗 Integration flow
+
+Send the user to the gateway:
+
+```
+https://YOUR_GATEWAY/auth/authorize?client_id=CLIENT_ID&redirect_uri=ENCODED_CALLBACK
+```
+
+Optionally append `client_secret=SECRET` to require the app's secret. The
+gateway authenticates the user and redirects to the **registered** callback:
+
+```
+YOUR_CALLBACK?auth=success&user=USERNAME      # allowed
+YOUR_CALLBACK?auth=failed&reason=no_access    # user not granted
+```
+
+---
+
+## 🗄️ Database schema
+
+SQLite, stored in `DATA_DIR/auth-gateway.db` (Docker volume
+`auth-gateway-data`).
+
+| Table | Description |
+|-------|-------------|
+| `users` | Admins and end-users (bcrypt password hashes). |
+| `apps` | Registered applications: name, `client_id`, `client_secret`, `redirect_uri`. |
+| `user_apps` | Which users may access which apps (cascades on delete). |
+| `auth_logs` | Every auth/admin attempt: user, app, IP, user-agent, success, event, timestamp. |
+| `settings` | Key/value config, e.g. the base URL. |
+
+---
+
+## 🧪 Tests
+
+`agw-test.sh` is a self-contained smoke suite that starts the server in a
+throwaway container and asserts the security and flow behaviour (redirect
+validation, rate limiting, secure cookies, cascades, icons, and more):
+
+```bash
+docker run --rm -v "$PWD:/app" -w /app node:22-bookworm-slim bash agw-test.sh
+```
+
+---
+
+## ⚠️ Security notes
+
+- 🔑 There is **no** default password. Set `ADMIN_PASSWORD` or record the
+  generated one from the first boot log, then keep it out of version control.
+- 🌐 Terminate TLS in front of the app and keep `TRUST_PROXY` matched to your
+  real proxy hop count, or client IPs and the `Secure` cookie will be wrong.
+- 🚫 Do not register real application callbacks in the demo seeder.
+- 💾 Back up `DATA_DIR` (or use the included backup script) to preserve users,
+  apps, and grants.
+- 🔒 The admin panel is protected by authentication, but you can additionally
+  restrict it at the proxy (e.g. Cloudflare Access) if you need.
+
+---
+
+## 🛠️ Tech stack
+
+Node.js 22 · Express · SQLite3 · express-session · bcryptjs · EJS · Bootstrap 5
 
 ---
 
 ## 📄 License
 
-MIT License - feel free to use this project for personal or commercial use.
-
----
-
-## ⚠️ Security Notes
-
-- 🔑 **ALWAYS** change the default admin password immediately after first login
-- 🌐 Use HTTPS in production (place behind a reverse proxy like Nginx/Traefik)
-- 📋 Regularly review authentication logs for suspicious activity
-- 💾 Keep the `data/` folder backed up to preserve user/app data
-- 🔒 Don't expose the admin panel to the public internet without authentication
-
----
-
-## 🛠️ Tech Stack
-
-- **Backend**: Node.js + Express
-- **Database**: SQLite3
-- **Auth**: bcryptjs + express-session
-- **Frontend**: EJS + Bootstrap 5 + Inter Font
-- **Deployment**: Docker + Docker Compose
-- **UI**: Dark glassmorphism theme with smooth animations
-
----
-
-## 📞 Support
-
-- 🐛 **Bug Reports**: [Open an Issue](https://github.com/YOUR_USERNAME/auth-app/issues)
-- 💡 **Feature Requests**: [Open an Issue](https://github.com/YOUR_USERNAME/auth-app/issues)
-- ⭐ **Like it?** Give it a star on GitHub!
+MIT — free for personal or commercial use.
 
 ---
 
 <div align="center">
 
-**Made with ❤️ for secure application access control**
+**Made with ❤️ for straightforward application access control**
 
-[![GitHub stars](https://img.shields.io/github/stars/YOUR_USERNAME/auth-app?style=social)](https://github.com/YOUR_USERNAME/auth-app)
-[![GitHub forks](https://img.shields.io/github/forks/YOUR_USERNAME/auth-app?style=social)](https://github.com/YOUR_USERNAME/auth-app)
+[![GitHub](https://img.shields.io/github/stars/Ferns1992/auth-app?style=social)](https://github.com/Ferns1992/auth-app)
 
 </div>
